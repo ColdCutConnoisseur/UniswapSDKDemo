@@ -3,9 +3,12 @@ import { Pool } from '@uniswap/v3-sdk'
 import { Token } from '@uniswap/sdk-core'
 import { abi as IUniswapV3PoolABI } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 
-const provider = new ethers.providers.JsonRpcProvider('https://mainnet.infura.io/v3/<<YOUR_PROJECT_ID_HERE>>')
+require('dotenv').config();
 
-const poolAddress = '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8'
+const infuraAPIKey = process.env["INFURA_API_KEY"];
+const poolAddress = process.env["POOL_ADDRESS"]!
+
+const provider = new ethers.providers.InfuraProvider("homestead", infuraAPIKey);
 
 const poolContract = new ethers.Contract(poolAddress, IUniswapV3PoolABI, provider)
 

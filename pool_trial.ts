@@ -1,5 +1,5 @@
 import { ethers } from 'ethers'
-import { Pool } from '@uniswap/v3-sdk'
+import { Pool, Position, nearestUsableTick, SqrtPriceMath } from '@uniswap/v3-sdk'
 import { Token } from '@uniswap/sdk-core'
 import { abi as IUniswapV3PoolABI } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 
@@ -30,6 +30,10 @@ interface State {
   observationCardinalityNext: number
   feeProtocol: number
   unlocked: boolean
+}
+
+async function getNaturalPriceFromSqrt(sqrtPrice) {
+  return sqrtPrice ** 2 / 2 ** 192
 }
 
 async function getPoolImmutables() {
@@ -74,7 +78,6 @@ async function main() {
   const [immutables, state] = await Promise.all([getPoolImmutables(), getPoolState()])
 
   const TokenA = new Token(3, immutables.token0, 6, 'USDC', 'USD Coin')
-
   const TokenB = new Token(3, immutables.token1, 18, 'WETH', 'Wrapped Ether')
 
   const poolExample = new Pool(
@@ -86,6 +89,46 @@ async function main() {
     state.tick
   )
   console.log(poolExample)
+
+  //Self-computed token0 price
+  const compPrice = await getNaturalPriceFromSqrt(state.sqrtPriceX96);
+
+  console.log(compPrice);
+
+  const token0Price = poolExample.token0Price
+  const token1Price = poolExample.token1Price
+  
+  console.log(token0Price)
+  console.log(token1Price)
+
+  const poolLiquidity = ethers.BigNumber.from(state.liquidity);
+
+  /*
+  const position = new Position({
+    pool: poolExample,
+    liquidity: poolLiquidity * 0.0002,
+    tickLower: nearestUsableTick(state.tick, immutables.tickSpacing) - immutables.tickSpacing * 2,
+    tickUpper: nearestUsableTick(state.tick, immutables.tickSpacing) + immutables.tickSpacing * 2,
+  })
+  */
+
+  const numPlusTicks = 20;
+
+  const posTickUpper = nearestUsableTick(state.tick, immutables.tickSpacing) + immutables.tickSpacing * numPlusTicks;
+
+  //console.log(posTickUpper)
+
+  // Calculate price at 'tick'
+
+  const try_ = Math.sqrt(1.0001 ** posTickUpper) * (2 ** 96);
+
+  //console.log(try_)
+
+  //sqrt
+  
+
+  //const priceAtTick = getSqrtRatioAtTick(posTickLower)
+
 }
 
 main()

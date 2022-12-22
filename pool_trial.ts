@@ -5,6 +5,7 @@ import { AlphaRouter, SwapType, SwapToRatioStatus } from '@uniswap/smart-order-r
 import { abi as IUniswapV3PoolABI } from '@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json'
 import { abi as QuoterABI } from '@uniswap/v3-periphery/artifacts/contracts/lens/Quoter.sol/Quoter.json'
 import { UniswapABI } from './uniswap_abi.json'
+import { exit } from 'process'
 
 require('dotenv').config();
 const positionConfig = require('./position_config.json')
@@ -13,11 +14,15 @@ const testMode = positionConfig.testMode
 
 // Config
 const infuraAPIKey = process.env["INFURA_API_KEY"]
-const poolAddress = process.env["POOL_ADDRESS"] // TODO: Make this a contract call
 const myWalletAddress = process.env["MY_WALLET_ADDRESS"]
+const poolAddress = positionConfig.poolAddress
 const newPositionLowerLimitDollarMargin = positionConfig.lowerLimitDollarMargin
 const newPositionUpperLimitDollarMargin = positionConfig.upperLimitDollarMargin
 const newPositionUSDAmount = positionConfig.newPositionTotalUsdAmount
+
+let currentTokenId = parseInt(positionConfig.tokenId)
+let lowerLimitPx = parseFloat(positionConfig.lowerLimitPrice)
+let upperLimitPx = parseFloat(positionConfig.upperLimitPrice)
 
 // Contract Addresses
 const quoterAddress = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
@@ -39,7 +44,6 @@ const provider = new ethers.providers.InfuraProvider(networkName, infuraAPIKey)
 
 // Create contract objects
 const poolContract = new ethers.Contract(poolAddress, IUniswapV3PoolABI, provider)
-const quoterContract = new ethers.Contract(quoterAddress, QuoterABI, provider)
 const positionContract = new ethers.Contract(uniswapContractAddress, UniswapABI, provider)
 
 interface Immutables {
@@ -60,10 +64,6 @@ interface State {
   observationCardinalityNext: number
   feeProtocol: number
   unlocked: boolean
-}
-
-async function getNaturalPriceFromSqrt(sqrtPrice) {
-  return sqrtPrice ** 2 / 2 ** 192
 }
 
 async function getPoolImmutables() {
@@ -103,50 +103,20 @@ async function getPoolState() {
 
   return PoolState
 }
-
-async function exactOutputSwapForETH() {
-  const [immutables, state] = await Promise.all([getPoolImmutables(), getPoolState()])
-
-  const TokenA = new Token(1, immutables.token0, 6, 'USDC', 'USD Coin')
-  const TokenB = new Token(1, immutables.token1, 18, 'WETH', 'Wrapped Ether')
-
-  const ethAmount = CurrencyAmount.fromRawAmount(TokenB, '10000000000000000')
-  const router = new AlphaRouter({ chainId: 1, provider: provider})
-
-  const route = await router.route(ethAmount, TokenA, TradeType.EXACT_OUTPUT,
-    {
-      recipient: myWalletAddress,
-      slippageTolerance: new Percent(5, 100),
-      deadline: Math.floor(Date.now() / 1000 + 1800),
-      type: SwapType.SWAP_ROUTER_02
-    }
-  );
-    //{ protocols: [Protocol.V3] }
-    //);
-
-  //console.log(route)
-
-  console.log("This is an example swap USDC for 0.01 (w)ETH...")
-
-  console.log(`USDC Cost Amount: ${route.quote.toFixed(2)}`)
-  console.log(`Gas Adjusted Quote In (USDC) AKA Full Cost: ${route.quoteGasAdjusted.toFixed(2)}`)
-  console.log(`Gas Used USDC: ${route.estimatedGasUsedUSD.toFixed(6)}`);
-}
-
   
 function returnCurrentETHPriceGivenTick(currentTick) {
-  // This will return ETH / 1 USDC
+  // This will return ETH / 1 USDC (2 decimals)
   const currentPrice = (1.0001 ** currentTick) / 10 ** 12 //ETH Decimals - USDC Decimals
 
   // Flip it to USDC / ETH
   const currentETHPrice = 1 / currentPrice
-  return currentETHPrice
+  return currentETHPrice.toFixed(2)
 }
 
 function returnTickMargin(currentTick, limitDollarMargin) {
   const currentETHPrice = returnCurrentETHPriceGivenTick(currentTick)
 
-  const dollarPerTick = currentETHPrice * 0.0001
+  const dollarPerTick = parseFloat(currentETHPrice) * 0.0001
 
   const numTicks = Math.floor(limitDollarMargin / dollarPerTick)
 
@@ -168,7 +138,7 @@ async function swapAndAddLiquidityAtomically (pool, currentTick, tickSpacing, US
   console.log(`Upper Limit Tick Margin: ${upperTickMargin}`)
   
   // Create a Position Instance
-  //    Can set 'liquidity' val to 1 as it will be changed in atomic
+  //    Can set 'liquidity' val to 1 as it will be set later
   const position = new Position({
     pool: pool,
     liquidity: 1,
@@ -180,7 +150,7 @@ async function swapAndAddLiquidityAtomically (pool, currentTick, tickSpacing, US
   const ETHAllocatedUSDAmount = Math.floor(0.50 * parseFloat(newPositionUSDAmount))
 
   const USDCAmount = USDCAllocatedUSDAmount * (10 ** 6)
-  const ETHAmount = (ETHAllocatedUSDAmount / currentETHPrice) * (10 ** 18)
+  const ETHAmount = (ETHAllocatedUSDAmount / parseFloat(currentETHPrice)) * (10 ** 18)
 
   console.log(`New Position USDC Amount: ${USDCAmount}`)
   console.log(`New Position ETH Amount: ${ETHAmount}`)
@@ -220,9 +190,15 @@ async function swapAndAddLiquidityAtomically (pool, currentTick, tickSpacing, US
       value: ethers.BigNumber.from(route.methodParameters.value),
       from: myWalletAddress,
       gasPrice: ethers.BigNumber.from(route.gasPriceWei),
-    };
+    }
 
-    //await provider.sendTransaction(transaction);
+    const signer = new ethers.Wallet(process.env.SIGNER_PK, provider);
+
+    const txnResult = await signer.sendTransaction(transaction);
+
+    console.log(txnResult)
+
+    console.log("TODO: Set new tokenId and change upper/lower price limits!")
   }
 }
 
@@ -249,7 +225,7 @@ async function swapAndCreateNewPosition() {
 
 async function liquidateCurrentPosition(positionToRemove) {
   const { calldata, value } = NonfungiblePositionManager.removeCallParameters(positionToRemove, {
-    tokenId: parseInt(positionConfig.tokenId),
+    tokenId: currentTokenId,
     liquidityPercentage: new Percent(1),            // 100% of position
     slippageTolerance: new Percent(50, 10_000),
     deadline: Math.floor(Date.now() / 1000 + 1800),
@@ -265,11 +241,8 @@ async function currentPoolPriceWithinLimits() {
   // Returns Bool: Is position within upper and lower price limits?
   const state = await getPoolState()
 
-  const currentETHPrice = returnCurrentETHPriceGivenTick(state.tick)
-  console.log(`Current pool ETH price: ${currentETHPrice.toFixed(2)}`)
-
-  const lowerLimitPx = parseFloat(positionConfig.lowerLimitPrice)
-  const upperLimitPx = parseFloat(positionConfig.upperLimitPrice)
+  const currentETHPrice = parseFloat(returnCurrentETHPriceGivenTick(state.tick))
+  console.log(`Current pool ETH price: ${currentETHPrice}`)
 
   console.log(`UpperLimitPx: ${upperLimitPx}`)
   console.log(`LowerLimitPx: ${lowerLimitPx}`)
@@ -298,23 +271,8 @@ function delay(ms) {
 
 async function runPositionLoop() {
   // main
-  const[immutables, state] = await Promise.all([getPoolImmutables(), getPoolState()])
 
-  const USDC = new Token(chainId, immutables.token0, 6, 'USDC', 'USD Coin')
-  const WETH = new Token(chainId, immutables.token1, 18, 'WETH', 'Wrapped Ether')
-
-  var USDC_WETH_POOL = new Pool(
-    USDC,
-    WETH,
-    immutables.fee,
-    state.sqrtPriceX96.toString(),
-    state.liquidity.toString(),
-    state.tick
-  )
-
-  var position = await positionContract.positions(parseInt(positionConfig.tokenId))
-
-  //console.log(position)
+  var position = await positionContract.positions(currentTokenId)
 
   const shouldRun = true
 
@@ -324,7 +282,7 @@ async function runPositionLoop() {
 
     if (!positionGood) {
       console.log("Liquidating current position...")
-      position = await positionContract.positions(parseInt(positionConfig.tokenId)) // Update Position
+      position = await positionContract.positions(currentTokenId) // Update Position
       liquidateCurrentPosition(position)
       console.log("Position Liquidated")
 
@@ -342,5 +300,6 @@ async function runPositionLoop() {
 }
 
 
-runPositionLoop()
-// main()
+// runPositionLoop()
+
+swapAndCreateNewPosition()

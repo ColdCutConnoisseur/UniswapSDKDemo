@@ -1,0 +1,9 @@
+{
+    "upperLimitPrice": 2195.2,
+    "lowerLimitPrice": 1248.9,
+    "tokenId": 123456,
+    "testMode": true,
+    "lowerLimitDollarMargin": 250,
+    "upperLimitDollarMargin": 250,
+    "newPositionTotalUsdAmount": 400
+}

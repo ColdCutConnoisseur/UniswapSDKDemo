@@ -1,3 +1,5 @@
+# NOTE: OLD README
+
 # SETUP
 - Make sure you have node / npm installed on your computer--you can install using homebrew (if on mac)
 - Run ```npm install``` to install dependencies

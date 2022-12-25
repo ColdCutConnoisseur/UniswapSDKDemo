@@ -4,7 +4,7 @@
     "lowerLimitPrice": 1248.9,
     "tokenId": 123456,
     "testMode": true,
-    "lowerLimitDollarMargin": 4,
-    "upperLimitDollarMargin": 4,
-    "newPositionTotalUsdAmount": 15
+    "lowerLimitDollarMargin": 0.01,
+    "upperLimitDollarMargin": 0.01,
+    "newPositionTotalUsdAmount": 10
 }

@@ -9,13 +9,17 @@ said position.  Continue the price check loop infinitely.
 
 
 ## Position Config
+- Set __tokenId__ attribute as the token ID for the current LP position you'd like to monitor.
+- __testMode__ is a switch whether you want to run functionality on Goerli (testnet) or mainnet.
+- __Lower / Upper Limit dollar amounts__ will be price margins added and subtracted from the current price to get new
+position price limits.
+- __newPositionTotalUsdAmount__ is the amount (in USD) you would like split amongst assets in new pool position.
+- __feeTier__ is the fier tier for newly minted LP positions.  500 --> 0.0005 --> 0.05% pool
 
 
 # Running
 - Run with ```npx ts-node pool_trial.ts```
 - To run in test mode on the Goerli testnet, set the 'testMode' attribute in position_config to 'true'.
-
-
 
 
 # TODO / Further Considerations

@@ -19,8 +19,8 @@ said position.  Continue the price check loop infinitely.
 
 
 # TODO / Further Considerations
-[ ] Add 'useNative' in AddLiqOptions
-[ ] make 'inputPermitToken' call in multicall, not outside of atomic swap + mint
+- [ ] Add 'useNative' in AddLiqOptions
+- [ ] make 'inputPermitToken' call in multicall, not outside of atomic swap + mint
 
 
 # General Notes / Troubleshooting

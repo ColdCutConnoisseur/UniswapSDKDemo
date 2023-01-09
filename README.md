@@ -20,6 +20,7 @@ position price limits.
 # Running
 - Run with ```npx ts-node pool_trial.ts```
 - To run in test mode on the Goerli testnet, set the 'testMode' attribute in position_config to 'true'.
+- Get some test ETH at https://goerlifaucet.com/
 
 
 # TODO / Further Considerations

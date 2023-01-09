@@ -184,8 +184,8 @@ async function swapAndAddLiquidityAtomically (pool, currentTick, tickSpacing, to
   const USDCAllocatedUSDAmount = Math.floor(0.50 * parseFloat(newPositionUSDAmount))
   const ETHAllocatedUSDAmount = Math.floor(0.50 * parseFloat(newPositionUSDAmount))
 
-  const USDCAmount = USDCAllocatedUSDAmount * (10 ** token0Decimals)
-  const ETHAmount = (ETHAllocatedUSDAmount / parseFloat(currentETHPrice)) * (10 ** token1Decimals)
+  const USDCAmount = Math.floor(USDCAllocatedUSDAmount * (10 ** token0Decimals))
+  const ETHAmount = Math.floor((ETHAllocatedUSDAmount / parseFloat(currentETHPrice)) * (10 ** token1Decimals))
 
   console.log(`New Position USDC Amount: ${USDCAmount}`)
   console.log(`New Position ETH Amount: ${ETHAmount}`)
